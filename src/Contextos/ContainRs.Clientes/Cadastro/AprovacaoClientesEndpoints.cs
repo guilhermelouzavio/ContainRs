@@ -26,7 +26,7 @@ public static class AprovacaoClientesEndpoints
             [FromRoute] Guid id
             , [FromServices] IRepository<Cliente> repository
             , [FromServices] IAcessoManager userManager
-            ,CancellationToken cancellationToken) =>
+            , CancellationToken cancellationToken) =>
         {
             var cliente = await repository
                 .GetFirstAsync(

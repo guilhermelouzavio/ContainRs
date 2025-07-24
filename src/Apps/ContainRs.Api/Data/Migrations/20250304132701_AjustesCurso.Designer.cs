@@ -4,6 +4,7 @@ using ContainRs.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ContainRs.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250304132701_AjustesCurso")]
+    partial class AjustesCurso
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,54 +24,6 @@ namespace ContainRs.Api.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("ContainRs.Api.Eventos.InboxMessage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("DataProcessamento")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Erro")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("OutboxMessageId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("TipoLeitor")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OutboxMessageId");
-
-                    b.ToTable("Inbox");
-                });
-
-            modelBuilder.Entity("ContainRs.Api.Eventos.OutBoxMessage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("DataCriacao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("InfoEvento")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TipoEvento")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("OutBox");
-                });
 
             modelBuilder.Entity("ContainRs.Clientes.Cadastro.Cliente", b =>
                 {
@@ -151,33 +106,6 @@ namespace ContainRs.Api.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Conteineres");
-                });
-
-            modelBuilder.Entity("ContainRs.Financeiro.Faturamento.Fatura", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("DataEmissao")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DataVencimento")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("LocacaoId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Numero")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<decimal>("Total")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Faturas");
                 });
 
             modelBuilder.Entity("ContainRs.Vendas.Locacoes.Locacao", b =>
@@ -295,22 +223,14 @@ namespace ContainRs.Api.Data.Migrations
                     b.Property<Guid>("SolicitacaoId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal>("ValorTotal")
+                        .HasColumnType("decimal(18,2)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SolicitacaoId");
 
                     b.ToTable("Propostas");
-                });
-
-            modelBuilder.Entity("ContainRs.Api.Eventos.InboxMessage", b =>
-                {
-                    b.HasOne("ContainRs.Api.Eventos.OutBoxMessage", "Evento")
-                        .WithMany()
-                        .HasForeignKey("OutboxMessageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Evento");
                 });
 
             modelBuilder.Entity("ContainRs.Clientes.Cadastro.Cliente", b =>
@@ -470,29 +390,10 @@ namespace ContainRs.Api.Data.Migrations
                                 .HasForeignKey("PropostaId");
                         });
 
-                    b.OwnsOne("ContainRs.Vendas.Propostas.ValorMonetario", "ValorTotal", b1 =>
-                        {
-                            b1.Property<Guid>("PropostaId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.Property<decimal>("Valor")
-                                .HasColumnType("decimal(18,2)");
-
-                            b1.HasKey("PropostaId");
-
-                            b1.ToTable("Propostas");
-
-                            b1.WithOwner()
-                                .HasForeignKey("PropostaId");
-                        });
-
                     b.Navigation("Situacao")
                         .IsRequired();
 
                     b.Navigation("Solicitacao");
-
-                    b.Navigation("ValorTotal")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("ContainRs.Clientes.Cadastro.Cliente", b =>

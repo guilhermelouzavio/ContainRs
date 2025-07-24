@@ -1,4 +1,6 @@
 ﻿using ContainRs.Contracts;
+using ContainRs.Clientes;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Transactions;
 
@@ -110,7 +112,8 @@ public static class ClientesEndpoints
 
             using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
-            await userManager.RemoverClienteAsync(clienteExistente.Email.Value,cancellationToken);
+            await userManager
+                .RemoverClienteAsync(clienteExistente.Email.Value, cancellationToken);
             await repository.RemoveAsync(clienteExistente, cancellationToken);
 
             scope.Complete();
@@ -135,10 +138,12 @@ public static class ClientesEndpoints
                 if (cliente is null) return Results.NotFound();
 
                 // verificar se já existe user associado ao email do cliente
-                var acesso = await userManager.ClientePossuiAcessoAsync(cliente.Email.Value, cancellationToken);
+                var acesso = await userManager
+                    .ClientePossuiAcessoAsync(cliente.Email.Value, cancellationToken);
 
                 // se não houver user, retornar status Pendente
-                if (!acesso.HasValue) return Results.Ok(RegistrationStatusResponse.Pendente(cliente));
+                if (!acesso.HasValue) 
+                    return Results.Ok(RegistrationStatusResponse.Pendente(cliente));
 
                 // se houver user e EmailConfirmed for false, retornar Em análise
                 if (acesso.HasValue && !acesso.Value) return Results.Ok(RegistrationStatusResponse.Reprovado(cliente));

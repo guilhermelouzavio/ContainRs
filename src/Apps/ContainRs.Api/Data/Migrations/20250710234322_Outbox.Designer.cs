@@ -4,6 +4,7 @@ using ContainRs.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ContainRs.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250710234322_Outbox")]
+    partial class Outbox
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,32 +24,6 @@ namespace ContainRs.Api.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("ContainRs.Api.Eventos.InboxMessage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("DataProcessamento")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Erro")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("OutboxMessageId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("TipoLeitor")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OutboxMessageId");
-
-                    b.ToTable("Inbox");
-                });
 
             modelBuilder.Entity("ContainRs.Api.Eventos.OutBoxMessage", b =>
                 {
@@ -300,17 +277,6 @@ namespace ContainRs.Api.Data.Migrations
                     b.HasIndex("SolicitacaoId");
 
                     b.ToTable("Propostas");
-                });
-
-            modelBuilder.Entity("ContainRs.Api.Eventos.InboxMessage", b =>
-                {
-                    b.HasOne("ContainRs.Api.Eventos.OutBoxMessage", "Evento")
-                        .WithMany()
-                        .HasForeignKey("OutboxMessageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Evento");
                 });
 
             modelBuilder.Entity("ContainRs.Clientes.Cadastro.Cliente", b =>

@@ -8,8 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\ContainRs.Contracts\ContainRs.Contracts.csproj" />
-    <ProjectReference Include="..\..\ContainRs.DDD\ContainRs.DDD.csproj" />
-    <ProjectReference Include="..\ContainRs.Financeiro\ContainRs.Financeiro.csproj" />
   </ItemGroup>
 
 </Project>

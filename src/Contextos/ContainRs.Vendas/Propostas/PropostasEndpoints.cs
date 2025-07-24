@@ -1,5 +1,4 @@
 ﻿using ContainRs.Contracts;
-using ContainRs.Vendas;
 using ContainRs.Vendas.Locacoes;
 using Microsoft.AspNetCore.Mvc;
 using System.Transactions;
@@ -47,10 +46,11 @@ public static class PropostasEndpoints
                 var proposta = new Proposta()
                 {
                     Id = Guid.NewGuid(),
-                    ValorTotal = request.ValorTotal,
+                    ClienteId = solicitacao.ClienteId,
+                    ValorTotal = new ValorMonetario(request.ValorTotal),
                     DataCriacao = DateTime.Now,
                     DataExpiracao = request.DataExpiracao,
-                    NomeArquivo = request.Arquivo.FileName,
+                    NomeArquivo = request?.Arquivo?.FileName == null ? "valor teste" : request?.Arquivo?.FileName,
                     SolicitacaoId = solicitacao.Id
                 };
 
@@ -58,11 +58,12 @@ public static class PropostasEndpoints
 
                 return Results.CreatedAtRoute(
                     ENDPOINT_NAME_GET_PROPOSTA,
-                    new { proposta.Id },
+                    new { Id = proposta.SolicitacaoId, PropostaId = proposta.Id },
                     PropostaResponse.From(proposta));
             })
             // deveria ser Comercial, mas para não criarmos usuários com papéis diferentes, usaremos o papel (role) Suporte
             .RequireAuthorization(policy => policy.RequireRole("Suporte"))
+            .DisableAntiforgery()
             .WithSummary("Vendedor envia proposta de locação")
             .Produces(StatusCodes.Status404NotFound)
             .Produces<PropostaResponse>(StatusCodes.Status201Created);
@@ -74,12 +75,21 @@ public static class PropostasEndpoints
         builder.MapGet("{id:guid}/proposals/{propostaId:guid}", async (
             [FromRoute] Guid id,
             [FromRoute] Guid propostaId,
+            [FromServices] IHttpContextAccessor accessor,
             [FromServices] IRepository<Proposta> repository) =>
         {
+            var clienteId = accessor.HttpContext?.User.Claims
+                .Where(c => c.Type.Equals("ClienteId"))
+                .Select(c => c.Value)
+                .FirstOrDefault();
+
+            if (clienteId is null) return Results.Unauthorized();
 
             var proposta = await repository
                 .GetFirstAsync(
-                    p => p.Id == propostaId && p.SolicitacaoId == id,
+                    p => p.Id == propostaId 
+                        && p.SolicitacaoId == id
+                        && p.ClienteId == Guid.Parse(clienteId),
                     p => p.Id);
             if (proposta is null) return Results.NotFound();
 
@@ -98,12 +108,19 @@ public static class PropostasEndpoints
     {
         builder.MapGet("{id:guid}/proposals", async (
             [FromRoute] Guid id,
+            [FromServices] IHttpContextAccessor accessor,
             [FromServices] IRepository<PedidoLocacao> repository) =>
         {
+            var clienteId = accessor.HttpContext?.User.Claims
+                .Where(c => c.Type.Equals("ClienteId"))
+                .Select(c => c.Value)
+                .FirstOrDefault();
+
+            if (clienteId is null) return Results.Unauthorized();
 
             var solicitacao = await repository
                 .GetFirstAsync(
-                    s => s.Id == id,
+                    s => s.Id == id && s.ClienteId == Guid.Parse(clienteId),
                     s => s.Id);
             if (solicitacao is null) return Results.NotFound();
 
@@ -122,33 +139,13 @@ public static class PropostasEndpoints
         builder.MapPatch("{id:guid}/proposals/{propostaId:guid}/accept", async (
             [FromRoute] Guid id,
             [FromRoute] Guid propostaId,
-            [FromServices] IRepository<Proposta> repoProposta,
-            [FromServices] IRepository<Locacao> repoLocacao) =>
+            [FromServices] IPropostaService propostaService) =>
         {
 
-            var proposta = await repoProposta
-                .GetFirstAsync(
-                    p => p.Id == propostaId && p.SolicitacaoId == id,
-                    p => p.Id);
+            var casoUso = new AprovarProposta(id, propostaId);
+            var proposta = await propostaService.AprovarAsync(casoUso);
+
             if (proposta is null) return Results.NotFound();
-
-            proposta.Situacao = SituacaoProposta.Aceita;
-
-            // criar locação a partir da proposta aceita
-            var locacao = new Locacao()
-            {
-                PropostaId = proposta.Id,
-                DataInicio = DateTime.Now,
-                DataPrevistaEntrega = proposta.Solicitacao.DataInicioOperacao.AddDays(-proposta.Solicitacao.DisponibilidadePrevia),
-                DataTermino = proposta.Solicitacao.DataInicioOperacao.AddDays(proposta.Solicitacao.DuracaoPrevistaLocacao)
-            };
-
-            using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-
-            await repoProposta.UpdateAsync(proposta);
-            await repoLocacao.AddAsync(locacao);
-
-            scope.Complete();
 
             return Results.Ok(PropostaResponse.From(proposta));
         })
@@ -194,27 +191,16 @@ public static class PropostasEndpoints
             [FromRoute] Guid propostaId,
             [FromBody] ComentarioRequest request,
             HttpContext context,
-            [FromServices] IRepository<Proposta> repository) =>
+            [FromServices] IPropostaService propostaService) =>
         {
-
-            var proposta = await repository
-                .GetFirstAsync(
-                    p => p.Id == propostaId && p.SolicitacaoId == id,
-                    p => p.Id);
-            if (proposta is null) return Results.NotFound();
 
             string? quem = context.User.Identity?.Name;
             if (quem is null) return Results.Unauthorized();
 
-            proposta.AddComentario(new Comentario()
-            {
-                Id = Guid.NewGuid(),
-                Data = DateTime.Now,
-                Usuario = quem,
-                Texto = request.Comentario
-            });
+            var casoUso = new ComentarProposta(id, propostaId, request.Comentario, quem);
+            var proposta = await propostaService.ComentarAsync(casoUso);
 
-            await repository.UpdateAsync(proposta);
+            if (proposta is null) return Results.NotFound();
 
             return Results.Ok(PropostaResponse.From(proposta));
         })

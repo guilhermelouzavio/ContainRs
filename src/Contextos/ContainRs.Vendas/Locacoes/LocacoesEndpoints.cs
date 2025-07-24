@@ -25,13 +25,10 @@ public static class LocacoesEndpoints
             HttpContext context,
             [FromServices] IRepository<Locacao> repository) =>
         {
-
             var clienteId = context.User.Claims
-               .Where(c => c.Type.Equals("ClienteId"))
-               .Select(c => c.Value)
-               .FirstOrDefault();
-       
-
+                .Where(c => c.Type.Equals("ClienteId"))
+                .Select(c => c.Value)
+                .FirstOrDefault();
             if (clienteId is null) return Results.Unauthorized();
 
             var locacoes = await repository

@@ -1,10 +1,10 @@
-using ContainRs.Api.Conteineres;
 using ContainRs.Api.Data;
 using ContainRs.Api.Data.Repositories;
-using ContainRs.Api.Domain;
 using ContainRs.Api.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Hangfire;
+using ContainRs.Api.Eventos;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +28,13 @@ builder.Services.AddScoped<IRepository<PedidoLocacao>, SolicitacaoRepository>();
 builder.Services.AddScoped<IRepository<Proposta>, PropostaRepository>();
 builder.Services.AddScoped<IRepository<Locacao>, LocacaoRepository>();
 builder.Services.AddScoped<IRepository<Conteiner>, ConteinerRepository>();
+builder.Services.AddScoped<IRepository<Fatura>, FaturaRepository>();
+builder.Services.AddScoped<IEventoManager, EventoManager>();
+builder.Services.AddScoped<IAcessoProposta, AcessoPropostaPorFinanceiro>();
+
+builder.Services.AddScoped<IPropostaService, PropostaService>();
+builder.Services.AddScoped<ICalculadoraPrazosLocacao, CalculadoraPadraoPrazosLocacao>();
+
 builder.Services.AddScoped<IAcessoManager, AcessoManagerWithIdentity>();
 
 builder.Services
@@ -36,11 +43,17 @@ builder.Services
     .AddEntityFrameworkStores<IdentityDbContext>();
 
 builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.Configure<IdentityOptions>(options =>
 {
     options.ClaimsIdentity.UserIdClaimType = "ClienteId";
 });
+
+builder.Services.AddHangfire(config =>
+{
+    config.UseSqlServerStorage(builder.Configuration.GetConnectionString("ContainRsDB"));
+}).AddHangfireServer(options => options.SchedulePollingInterval = TimeSpan.FromSeconds(5));
 
 var app = builder.Build();
 
@@ -63,4 +76,13 @@ app
     .MapLocacoesEndpoints()
     .MapConteineresEndpoints();
 
+//Emissor de Tarefas
+app.Services
+    .GetRequiredService<IRecurringJobManager>()
+    .AddOrUpdate<EmissorDeFaturas>(
+    nameof(EmissorDeFaturas),
+    job => job.ExecutarAsync(),
+    Cron.Minutely);
+
 app.Run();
+
